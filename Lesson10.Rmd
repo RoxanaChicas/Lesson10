@@ -1,0 +1,169 @@
+---
+title: "Lesson10"
+author: "Vicki Hertzberg"
+date: "3/22/2017"
+output: html_document
+---
+
+
+# Lesson 10
+
+Today we are going to learn about a few more techniques for supervised learning, then we will go into techniques for unsupervised learning.
+
+## More on Supervised Learning
+
+### k-Nearest Neighbor Classification
+
+Another technique is the k-nearest neighbor technique, which is pretty intuitive. Let's say that we have some old observations with outcome variables and associated predictor variables. What the procedure does is place all of the know predictor variables out there in space, then place the point where the predictor variables for the new observation fall. We will then calculate a distance in that space between the new point and the other points. We will then use the k-closest observations close to the new point, and calculate a predicted value for the new point as an average of the outcome variables for those k-nearest neighbors. We typically use Euclidean distance for this calculation. 
+
+We can use the `knn` function in the `class` package to do this. We will have to decide what value of k we are going to use. 
+
+Let's return now to the NHANES Diabetes dataset from last week. I figured out what I was doing wrong (thanks Melinda!) and now we can use it again.
+
+```{r}
+library(tidyverse)
+library(class)
+library(rpart)
+library(NHANES)
+library(RColorBrewer)
+library(plot3D)
+library(parallel)
+library(randomForestSRC)
+library(ggRandomForests)
+library(mosaic)
+
+# Create the NHANES dataset again
+
+people <- NHANES %>% select(Age, Gender, Diabetes, BMI, HHIncome, PhysActive) %>% na.omit()
+
+glimpse(people)
+
+
+# What is the marginal distribution of Diabetes?
+
+tally(~ Diabetes, data = people, format = "percent")
+```
+
+
+
+
+```{r}
+class(people)
+
+# Convert back to dataframe
+people <- as.data.frame(people)
+glimpse(people)
+
+# Convert factors to numeric - the packages just seem to work better that way
+people$Gender <- as.numeric(people$Gender)
+people$Diabetes <- as.numeric(people$Gender)
+people$HHIncome <- as.numeric(people$HHIncome)
+people$PhysActive <- as.numeric(people$PhysActive)
+
+people <- na.omit(people)
+
+glimpse(people)
+
+
+```
+
+
+Now for the procedure
+
+```{r}
+# Apply knn procedure to predict Diabetes
+
+# Let's try different values of k to see how that affects performance
+knn.1 <- knn(train = people, test = people, cl = as.numeric(people$Diabetes), k = 1)
+knn.3 <- knn(train = people, test = people, cl = people$Diabetes, k = 3)
+knn.5 <- knn(train = people, test = people, cl = people$Diabetes, k = 5)
+knn.20 <- knn(train = people, test = people, cl = people$Diabetes, k = 20)
+
+#knn.1
+
+
+```
+
+Now let's see how well it classifies
+
+```{r}
+
+# Calculate the percent predicted correctly
+
+100*sum(people$Diabetes == knn.1)/length(knn.1)
+100*sum(people$Diabetes == knn.3)/length(knn.3)
+100*sum(people$Diabetes == knn.5)/length(knn.5)
+100*sum(people$Diabetes == knn.20)/length(knn.20)
+
+```
+
+We see that as k increases, the prediction worsens, but this will not always be the case.
+
+What about success overall?
+
+```{r}
+
+# Another way to look at success rate against increasing k
+
+table(knn.1, people$Diabetes)
+table(knn.3, people$Diabetes)
+table(knn.5, people$Diabetes)
+table(knn.20, people$Diabetes)
+```
+
+
+
+So which classifier should you choose? Well, the good news is that you don't have to. There is what is called an ensemble method, in which you run several classifiers, then take the majority vote. We are also going to do this over a grid covering the *Age x BMI* space, so that we can do visualize the results from each classifier.
+
+```{r}
+
+# Create the grid
+
+ages <- range(~ Age, data = people)
+bmis <- range(~ Age, data = people)
+res <- 100
+fake_grid <- expand.grid(
+  Age = seq(from = ages[1], to = ages[2], length.out = res),
+  BMI = seq(from = bmis[1], to = bmis[2], length.out = res))
+
+# Evaluate each model on each grid point
+
+form <- as.formula("Diabetes ~ Age + BMI")
+
+# For the decision tree
+
+dmod_tree <- rpart(form, data = people, control = rpart.control(cp = 0.005, minbucket = 30))
+
+# For the forest
+
+set.seed(20371)
+dmod_forest <- rfsrc(form, data = people, ntree = 201, mtry = 3)
+
+# Now the predictions for tree and forest
+
+#pred_tree <- predict(dmod_tree, newdata = fake_grid)[, 1]
+#pred_forest <- predict(dmod_forest, newdata = fake_grid, type = "prob")[, 1]
+
+
+# K-nearest neighbor prediction
+
+#pred_knn <- people %>%
+#  select(Age, BMI) %>%
+#  knn(test=select(fake_grid, Age, BMI), cl = people$Diabetes, k=5) %>%
+#  as.numeric() - 
+
+
+
+
+#Diabetes_ensemble <- ifelse((pred_knn =="Yes") +
+#                           (pred_tree == "Yes") +
+#                           (pred_forest == "Yes") >= 2, "Yes", "No")
+
+# Create the confusion matrix
+
+#confusion_ensemble <- tally(Diabetes_ensemble~Diabetes, data=people, format="count")
+#confusion_ensemble
+#sum(diag(confusion_ensemble))/nrow(people$Diabetes)
+
+```
+
