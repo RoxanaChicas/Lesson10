@@ -1,0 +1,143 @@
+---
+title: "Lesson10Part3"
+author: "Vicki Hertzberg"
+date: "3/22/2017"
+output: html_document
+---
+
+
+# Unsupervised learning
+
+For Act III today we will talk about unsupervised learning - that is we want to discover patterns in the data without an *a priori* understanding of any grouping structure.
+
+There are a couple of ways to do this. We will talk about k-means clustering and principal components analysis (PCA).
+
+## Clustering
+
+You have probably all seen an example of an evolutionary tree - sometimes also called a dendogram. Although biologists will imagine that at each branching point there was an actual being (plant or animal), the descendants of whom split into groups that evolved in different directions. They will group similar beings close to each other, and not-so-similar ones at further distances. But you will note that there is no outcome variable - just decisions as to what is close and what is far with respect to relatedness.
+
+In general you can use trees to describe the similarity between objects, regardless of how they came to be. The tree may or may not be a reflection of something deeper about the objects and their relationships - it can just be a simple way to visualize relationships.
+
+To develop these trees from a set of numerical variables, none of which constitutes a *response* you would need to plot the data as points in space then make branches based on how close together points are. This technique is called _hierarchical clustering_.
+
+The `NCI60` dataset contains microarray gene expression levels on 6830 genes for 68 cancer cell lines. Although cancer cell type is recorded, we are going to explore how the data group without considering this variable, then look at how closely the *de novo* grouping compares to the cell types. The data come from the publication by Ross et al (Nature Genetics, 2000). The dataset is available in the `ISLR` package. The `ape` package contains many functions for phylogenetic trees.
+
+```{r}
+library(tidyverse)
+library(maps)
+library(ISLR)
+library(ape)
+
+nci.labs <- NCI60$labs # Labels for checking later
+nci.data <- NCI60$data
+
+# What do the data look like?
+dim(nci.data)
+length(nci.labs)
+nci.labs[1:4]
+table(nci.labs)
+
+
+# Scale the data before clustering
+sd.data <- scale(nci.data)
+
+# Calculate Euclidean distance between each pair of points
+data.dist <- dist(sd.data)
+
+# Plot the tree, default linkage is 'complete'
+plot(hclust(data.dist), labels = nci.labs, main = "Complete Linkage", xlab = "",
+     sub = "", ylab = "")
+
+# Plot the tree, linkage is 'average'
+plot(hclust(data.dist), method = "average", labels = nci.labs, main = "Average Linkage", xlab = "", 
+     sub = "", ylab = "")
+
+# Plot the tree, default linkage is 'single'
+plot(hclust(data.dist), method = "single", labels = nci.labs, main = "Single Linkage", xlab = "", 
+     sub = "", ylab = "")
+
+
+
+
+
+```
+
+How do you think these trees compare?
+
+Which one should we use?
+
+```{r}
+# Let's use complete linkage and cut into 4 clusters
+
+hc.out <- hclust(dist(sd.data))
+hc.clusters <- cutree(hc.out, 4)
+table(hc.clusters, nci.labs)
+
+
+```
+
+Where are the leukemia cases? What about the breast cancer cases?
+
+Where in the tree is the cut that yielded the 4 clusters?
+
+```{r}
+# plot the cut in the tree that yielded the 4 clusters
+
+plot(hc.out, labels = nci.labs)
+abline(h=139, col = "red")
+```
+
+Let's look at the summary of the tree:
+
+```{r}
+# Summary of hierarchical clustering
+hc.out
+```
+
+An alternative method of clustering is _K-means clustering_. Again, we place our points in space, and decide on groups, but we do so without consideration of hierarchy. 
+
+Let's see how these two types of clustering compare on the `NCI60` dataset:
+
+```{r}
+
+# K-means clustering with K=4 (from the hierarchical clustering number)
+
+set.seed(40523)
+km.out = kmeans(sd.data, 4, nstart = 20)
+km.clusters = km.out$cluster
+table(km.clusters, hc.clusters)
+
+```
+
+How do the clustering methods compare?
+
+Which clusters are found by both methods?
+
+### Another example
+
+Let's look at another example. We have data about the cities in the world in the dataset`WorldCities`. For the 4000 largest cities, considering *only* latitude and longitude (two of the *features* of this dataset), how would these data items group and plot?
+
+```{r}
+#get the 4000 largest cities, variables are only latitude and longitude
+
+BigCities <- world.cities %>%
+  arrange(desc(pop)) %>%
+  head(4000) %>%
+  select(long, lat)
+glimpse(BigCities)
+```
+
+Notice that the `BigCities` dataset does not even contain the names of the cities, *just* latitude and longitude.
+
+```{r}
+library(mclust)
+set.seed(15)
+city_clusts <- BigCities %>%
+  kmeans(centers = 6) %>%
+  fitted("classes") %>%
+  as.character()
+BigCities <- BigCities %>% mutate(cluster = city_clusts)
+BigCities %>% ggplot(aes(x=long, y=lat)) +
+  geom_point(aes(color = cluster), alpha = 0.5)
+```
+
