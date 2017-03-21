@@ -34,14 +34,16 @@ library(mosaic)
 
 # Create the NHANES dataset again
 
-people <- NHANES %>% select(Age, Gender, Diabetes, BMI, HHIncome, PhysActive) %>% na.omit()
+people <- NHANES %>% 
+  dplyr::select(Age, Gender, Diabetes, BMI, HHIncome, PhysActive) %>% 
+  na.omit()
 
 glimpse(people)
 
 
 # What is the marginal distribution of Diabetes?
 
-tally(~ Diabetes, data = people, format = "percent")
+mosaic::tally(~ Diabetes, data = people, format = "percent")
 ```
 
 
@@ -74,10 +76,14 @@ Now for the procedure
 # Apply knn procedure to predict Diabetes
 
 # Let's try different values of k to see how that affects performance
-knn.1 <- knn(train = people, test = people, cl = as.numeric(people$Diabetes), k = 1)
-knn.3 <- knn(train = people, test = people, cl = people$Diabetes, k = 3)
-knn.5 <- knn(train = people, test = people, cl = people$Diabetes, k = 5)
-knn.20 <- knn(train = people, test = people, cl = people$Diabetes, k = 20)
+knn.1 <- knn(train = people, test = people, 
+             cl = as.numeric(people$Diabetes), k = 1)
+knn.3 <- knn(train = people, test = people, 
+             cl = people$Diabetes, k = 3)
+knn.5 <- knn(train = people, test = people, 
+             cl = people$Diabetes, k = 5)
+knn.20 <- knn(train = people, test = people, 
+              cl = people$Diabetes, k = 20)
 
 #knn.1
 
@@ -119,38 +125,56 @@ So which classifier should you choose? Well, the good news is that you don't hav
 
 # Create the grid
 
-ages <- range(~ Age, data = people)
-bmis <- range(~ Age, data = people)
+ages <- mosaic::range(~ Age, data = people)
+bmis <- mosaic::range(~ Age, data = people)
 res <- 100
 fake_grid <- expand.grid(
   Age = seq(from = ages[1], to = ages[2], length.out = res),
   BMI = seq(from = bmis[1], to = bmis[2], length.out = res))
 
-# Evaluate each model on each grid point
+# reinitialize the people dataset - fix Diabetes
+# back to factor of "Yes" and "No"
+
+#people <- NHANES[, c("Age", "Gender", "Diabetes", 
+#                     "BMI", "HHIncome", "PhysActive")]
+#people <- na.omit(people)
+#people <- as.data.frame(people)
+
+people <- NHANES %>% 
+  dplyr::select(Age, Gender, Diabetes, BMI, HHIncome, PhysActive) %>% 
+  na.omit()
 
 form <- as.formula("Diabetes ~ Age + BMI")
 
+# Evaluate each model on each grid point
 # For the decision tree
 
-dmod_tree <- rpart(form, data = people, control = rpart.control(cp = 0.005, minbucket = 30))
+dmod_tree <- rpart(form, data = people, 
+                   control = rpart.control(cp = 0.005, minbucket = 30))
 
 # For the forest
 
 set.seed(20371)
-dmod_forest <- rfsrc(form, data = people, ntree = 201, mtry = 3)
+#dmod_forest <- rfsrc(form, data = people, 
+#                     ntree = 201, mtry = 3)
+# try with randomForest instead of randomForestSRC package
+library(randomForest)
+dmod_forest <- randomForest(form, data = people, 
+                     ntree = 201, mtry = 2)
 
 # Now the predictions for tree and forest
 
-#pred_tree <- predict(dmod_tree, newdata = fake_grid)[, 1]
-#pred_forest <- predict(dmod_forest, newdata = fake_grid, type = "prob")[, 1]
-
+pred_tree <- predict(dmod_tree, newdata = fake_grid)[, "Yes"]
+# pred_tree <- predict(dmod_tree, newdata = fake_grid)[, 1]
+pred_forest <- predict(dmod_forest, newdata = fake_grid, 
+                       type = "prob")[, "Yes"]
 
 # K-nearest neighbor prediction
 
-#pred_knn <- people %>%
-#  select(Age, BMI) %>%
-#  knn(test=select(fake_grid, Age, BMI), cl = people$Diabetes, k=5) %>%
-#  as.numeric() - 
+pred_knn <- people %>%
+  select(Age, BMI) %>%
+  knn(test=select(fake_grid, Age, BMI), cl = people$Diabetes, k=5) %>%
+  as.numeric() - 1
 
 
 

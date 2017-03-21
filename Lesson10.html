@@ -134,37 +134,47 @@ $(document).ready(function () {
 <p>We can use the <code>knn</code> function in the <code>class</code> package to do this. We will have to decide what value of k we are going to use.</p>
 <p>Let’s return now to the NHANES Diabetes dataset from last week. I figured out what I was doing wrong (thanks Melinda!) and now we can use it again.</p>
 <pre class="r"><code>library(tidyverse)</code></pre>
+<pre><code>## Warning: package 'tidyverse' was built under R version 3.3.3</code></pre>
 <pre><code>## Loading tidyverse: ggplot2
 ## Loading tidyverse: tibble
 ## Loading tidyverse: tidyr
 ## Loading tidyverse: readr
 ## Loading tidyverse: purrr
 ## Loading tidyverse: dplyr</code></pre>
+<pre><code>## Warning: package 'ggplot2' was built under R version 3.3.3</code></pre>
+<pre><code>## Warning: package 'tidyr' was built under R version 3.3.3</code></pre>
 <pre><code>## Conflicts with tidy packages ----------------------------------------------</code></pre>
 <pre><code>## filter(): dplyr, stats
 ## lag():    dplyr, stats</code></pre>
 <pre class="r"><code>library(class)
 library(rpart)
-library(NHANES)
-library(RColorBrewer)
-library(plot3D)
-library(parallel)
+library(NHANES)</code></pre>
+<pre><code>## Warning: package 'NHANES' was built under R version 3.3.3</code></pre>
+<pre class="r"><code>library(RColorBrewer)
+library(plot3D)</code></pre>
+<pre><code>## Warning: package 'plot3D' was built under R version 3.3.3</code></pre>
+<pre class="r"><code>library(parallel)
 library(randomForestSRC)</code></pre>
+<pre><code>## Warning: package 'randomForestSRC' was built under R version 3.3.3</code></pre>
 <pre><code>## 
 ##  randomForestSRC 2.4.2 
 ##  
 ##  Type rfsrc.news() to see new features, changes, and bug fixes. 
 ## </code></pre>
 <pre class="r"><code>library(ggRandomForests)</code></pre>
+<pre><code>## Warning: package 'ggRandomForests' was built under R version 3.3.3</code></pre>
 <pre><code>## 
 ## Attaching package: 'ggRandomForests'</code></pre>
 <pre><code>## The following object is masked from 'package:randomForestSRC':
 ## 
 ##     partial.rfsrc</code></pre>
 <pre class="r"><code>library(mosaic)</code></pre>
+<pre><code>## Warning: package 'mosaic' was built under R version 3.3.3</code></pre>
 <pre><code>## Loading required package: lattice</code></pre>
 <pre><code>## Loading required package: mosaicData</code></pre>
+<pre><code>## Warning: package 'mosaicData' was built under R version 3.3.3</code></pre>
 <pre><code>## Loading required package: Matrix</code></pre>
+<pre><code>## Warning: package 'Matrix' was built under R version 3.3.3</code></pre>
 <pre><code>## 
 ## Attaching package: 'Matrix'</code></pre>
 <pre><code>## The following object is masked from 'package:tidyr':
@@ -190,7 +200,9 @@ library(randomForestSRC)</code></pre>
 ##     max, mean, min, prod, range, sample, sum</code></pre>
 <pre class="r"><code># Create the NHANES dataset again
 
-people &lt;- NHANES %&gt;% select(Age, Gender, Diabetes, BMI, HHIncome, PhysActive) %&gt;% na.omit()
+people &lt;- NHANES %&gt;% 
+  dplyr::select(Age, Gender, Diabetes, BMI, HHIncome, PhysActive) %&gt;% 
+  na.omit()
 
 glimpse(people)</code></pre>
 <pre><code>## Observations: 7,555
@@ -203,7 +215,7 @@ glimpse(people)</code></pre>
 ## $ PhysActive &lt;fctr&gt; No, No, No, No, Yes, Yes, Yes, Yes, Yes, Yes, Yes,...</code></pre>
 <pre class="r"><code># What is the marginal distribution of Diabetes?
 
-tally(~ Diabetes, data = people, format = &quot;percent&quot;)</code></pre>
+mosaic::tally(~ Diabetes, data = people, format = &quot;percent&quot;)</code></pre>
 <pre><code>## Diabetes
 ##        No       Yes 
 ## 90.946393  9.053607</code></pre>
@@ -241,10 +253,14 @@ glimpse(people)</code></pre>
 <pre class="r"><code># Apply knn procedure to predict Diabetes
 
 # Let's try different values of k to see how that affects performance
-knn.1 &lt;- knn(train = people, test = people, cl = as.numeric(people$Diabetes), k = 1)
-knn.3 &lt;- knn(train = people, test = people, cl = people$Diabetes, k = 3)
-knn.5 &lt;- knn(train = people, test = people, cl = people$Diabetes, k = 5)
-knn.20 &lt;- knn(train = people, test = people, cl = people$Diabetes, k = 20)
+knn.1 &lt;- knn(train = people, test = people, 
+             cl = as.numeric(people$Diabetes), k = 1)
+knn.3 &lt;- knn(train = people, test = people, 
+             cl = people$Diabetes, k = 3)
+knn.5 &lt;- knn(train = people, test = people, 
+             cl = people$Diabetes, k = 5)
+knn.20 &lt;- knn(train = people, test = people, 
+              cl = people$Diabetes, k = 20)
 
 #knn.1</code></pre>
 <p>Now let’s see how well it classifies</p>
@@ -253,11 +269,11 @@ knn.20 &lt;- knn(train = people, test = people, cl = people$Diabetes, k = 20)
 100*sum(people$Diabetes == knn.1)/length(knn.1)</code></pre>
 <pre><code>## [1] 100</code></pre>
 <pre class="r"><code>100*sum(people$Diabetes == knn.3)/length(knn.3)</code></pre>
-<pre><code>## [1] 96.33355</code></pre>
+<pre><code>## [1] 96.54533</code></pre>
 <pre class="r"><code>100*sum(people$Diabetes == knn.5)/length(knn.5)</code></pre>
-<pre><code>## [1] 94.62608</code></pre>
+<pre><code>## [1] 94.66578</code></pre>
 <pre class="r"><code>100*sum(people$Diabetes == knn.20)/length(knn.20)</code></pre>
-<pre><code>## [1] 87.49173</code></pre>
+<pre><code>## [1] 87.46525</code></pre>
 <p>We see that as k increases, the prediction worsens, but this will not always be the case.</p>
 <p>What about success overall?</p>
 <pre class="r"><code># Another way to look at success rate against increasing k
@@ -270,53 +286,81 @@ table(knn.1, people$Diabetes)</code></pre>
 <pre class="r"><code>table(knn.3, people$Diabetes)</code></pre>
 <pre><code>##      
 ## knn.3    1    2
-##     1 3650  136
-##     2  141 3628</code></pre>
+##     1 3657  127
+##     2  134 3637</code></pre>
 <pre class="r"><code>table(knn.5, people$Diabetes)</code></pre>
 <pre><code>##      
 ## knn.5    1    2
-##     1 3584  199
-##     2  207 3565</code></pre>
+##     1 3582  194
+##     2  209 3570</code></pre>
 <pre class="r"><code>table(knn.20, people$Diabetes)</code></pre>
 <pre><code>##       
 ## knn.20    1    2
-##      1 3333  487
-##      2  458 3277</code></pre>
+##      1 3321  477
+##      2  470 3287</code></pre>
 <p>So which classifier should you choose? Well, the good news is that you don’t have to. There is what is called an ensemble method, in which you run several classifiers, then take the majority vote. We are also going to do this over a grid covering the <em>Age x BMI</em> space, so that we can do visualize the results from each classifier.</p>
 <pre class="r"><code># Create the grid
 
-ages &lt;- range(~ Age, data = people)
-bmis &lt;- range(~ Age, data = people)
+ages &lt;- mosaic::range(~ Age, data = people)
+bmis &lt;- mosaic::range(~ Age, data = people)
 res &lt;- 100
 fake_grid &lt;- expand.grid(
   Age = seq(from = ages[1], to = ages[2], length.out = res),
   BMI = seq(from = bmis[1], to = bmis[2], length.out = res))
 
-# Evaluate each model on each grid point
+# reinitialize the people dataset - fix Diabetes
+# back to factor of &quot;Yes&quot; and &quot;No&quot;
+
+#people &lt;- NHANES[, c(&quot;Age&quot;, &quot;Gender&quot;, &quot;Diabetes&quot;, 
+#                     &quot;BMI&quot;, &quot;HHIncome&quot;, &quot;PhysActive&quot;)]
+#people &lt;- na.omit(people)
+#people &lt;- as.data.frame(people)
+
+people &lt;- NHANES %&gt;% 
+  dplyr::select(Age, Gender, Diabetes, BMI, HHIncome, PhysActive) %&gt;% 
+  na.omit()
 
 form &lt;- as.formula(&quot;Diabetes ~ Age + BMI&quot;)
 
+# Evaluate each model on each grid point
 # For the decision tree
 
-dmod_tree &lt;- rpart(form, data = people, control = rpart.control(cp = 0.005, minbucket = 30))
+dmod_tree &lt;- rpart(form, data = people, 
+                   control = rpart.control(cp = 0.005, minbucket = 30))
 
 # For the forest
 
 set.seed(20371)
-dmod_forest &lt;- rfsrc(form, data = people, ntree = 201, mtry = 3)
+#dmod_forest &lt;- rfsrc(form, data = people, 
+#                     ntree = 201, mtry = 3)
+# try with randomForest instead of randomForestSRC package
+library(randomForest)</code></pre>
+<pre><code>## randomForest 4.6-12</code></pre>
+<pre><code>## Type rfNews() to see new features/changes/bug fixes.</code></pre>
+<pre><code>## 
+## Attaching package: 'randomForest'</code></pre>
+<pre><code>## The following object is masked from 'package:dplyr':
+## 
+##     combine</code></pre>
+<pre><code>## The following object is masked from 'package:ggplot2':
+## 
+##     margin</code></pre>
+<pre class="r"><code>dmod_forest &lt;- randomForest(form, data = people, 
+                     ntree = 201, mtry = 2)
 
 # Now the predictions for tree and forest
 
-#pred_tree &lt;- predict(dmod_tree, newdata = fake_grid)[, 1]
-#pred_forest &lt;- predict(dmod_forest, newdata = fake_grid, type = &quot;prob&quot;)[, 1]
-
+pred_tree &lt;- predict(dmod_tree, newdata = fake_grid)[, &quot;Yes&quot;]
+# pred_tree &lt;- predict(dmod_tree, newdata = fake_grid)[, 1]
+pred_forest &lt;- predict(dmod_forest, newdata = fake_grid, 
+                       type = &quot;prob&quot;)[, &quot;Yes&quot;]
 
 # K-nearest neighbor prediction
 
-#pred_knn &lt;- people %&gt;%
-#  select(Age, BMI) %&gt;%
-#  knn(test=select(fake_grid, Age, BMI), cl = people$Diabetes, k=5) %&gt;%
-#  as.numeric() - 
+pred_knn &lt;- people %&gt;%
+  select(Age, BMI) %&gt;%
+  knn(test=select(fake_grid, Age, BMI), cl = people$Diabetes, k=5) %&gt;%
+  as.numeric() - 1
 
 
 
